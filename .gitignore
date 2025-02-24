@@ -1,0 +1,26 @@
+# 忽略 IntelliJ IDEA 的项目配置目录
+.idea/
+
+# 忽略 CMake 构建目录
+cmake-build-*/
+
+# 忽略其他可能的构建目录
+build/
+out/
+bin/
+obj/
+
+# 忽略编译生成的文件
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# 忽略日志文件
+*.log
+
+# 忽略临时文件
+*.tmp
+*.swp
+*.swo
