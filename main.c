@@ -99,6 +99,7 @@ void ethernet_dhcp_thread(void * pvParameters)
                 if (dhcp_supplied_address(netif))
                 {
                     DHCP_state = DHCP_ADDRESS_ASSIGNED;
+                    vTaskDelete(NULL);
                 }
                 else
                 {
@@ -131,9 +132,9 @@ static void netif_config(void)
     ip_addr_t netmask;
     ip_addr_t gw;
 
-    ip_addr_set_zero_ip4(&ipaddr);
-    ip_addr_set_zero_ip4(&netmask);
-    ip_addr_set_zero_ip4(&gw);
+    IP4_ADDR(&ipaddr, 192, 168, 31, 7);  // 例如：192.168.1.100
+    IP4_ADDR(&netmask, 255, 255, 255, 0); // 子网掩码：255.255.255.0
+    IP4_ADDR(&gw, 192, 168, 31, 1);       // 网关：192.168.1.1
 
     /* add the network interface */
     netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
@@ -144,6 +145,23 @@ static void netif_config(void)
     netif_set_up(&gnetif);
     netif_set_link_up(&gnetif);
     xTaskCreate(ethernet_dhcp_thread, "EthDHCP", configMINIMAL_STACK_SIZE * 2, &gnetif, 1, NULL);
+}
+
+void printAllTasksStackUsage() {
+    TaskHandle_t xTask;
+    TaskStatus_t taskStatus;
+    UBaseType_t uxTaskCount = uxTaskGetNumberOfTasks();
+    TaskStatus_t *pxTaskStatusArray = pvPortMalloc(uxTaskCount * sizeof(TaskStatus_t));
+
+    if (pxTaskStatusArray != NULL) {
+        uxTaskGetSystemState(pxTaskStatusArray, uxTaskCount, NULL);
+        for (UBaseType_t i = 0; i < uxTaskCount; i++) {
+            printf("Task Name: %s, Stack High Water Mark: %u\n",
+                   pxTaskStatusArray[i].pcTaskName,
+                   pxTaskStatusArray[i].usStackHighWaterMark);
+        }
+        vPortFree(pxTaskStatusArray);
+    }
 }
 
 void wifi_app(void* pvParameters)
@@ -193,16 +211,23 @@ void wifi_app(void* pvParameters)
 
     while (1) {
         // 数据发送
-        // esp_wifi_internal_tx(WIFI_IF_STA,buf,sizeof(buf));
 
-        vTaskDelay(1000);
+        // esp_wifi_internal_tx(WIFI_IF_STA,buf,sizeof(buf));
+        size_t freeHeapSize = xPortGetFreeHeapSize();
+        size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
+
+        printf("Free Heap Size: %u bytes\n", freeHeapSize);
+        printf("Minimum Ever Free Heap Size: %u bytes\n", minEverFreeHeapSize);
+        //printAllTasksStackUsage();
+
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
 
 void main_app(__unused void *params) {
     xTaskCreate(wifi_app, "wifi_thread", (10 * 1024), NULL, tskIDLE_PRIORITY + 2UL, NULL);
     while(true) {
-        vTaskDelete(NULL);
+       vTaskDelete(NULL);
     }
 }
 

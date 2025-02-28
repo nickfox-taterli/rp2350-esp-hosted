@@ -15,10 +15,10 @@
 #define H_MAX_SYNC_RPC_REQUESTS                      5
 #define H_MAX_ASYNC_RPC_REQUESTS                     5
 
-#define RPC_TASK_STACK_SIZE                          (5*1024)
-#define RPC_TASK_PRIO                                23
-#define DFLT_TASK_STACK_SIZE                         (5*1024)
-#define DFLT_TASK_PRIO                               23
+#define RPC_TASK_STACK_SIZE                          (1024)
+#define RPC_TASK_PRIO                                3
+#define DFLT_TASK_STACK_SIZE                         (1024)
+#define DFLT_TASK_PRIO                               3
 
 #define HOSTED_BLOCK_MAX                             portMAX_DELAY
 

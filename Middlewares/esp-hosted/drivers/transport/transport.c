@@ -36,12 +36,6 @@ static const char TAG[] = "transport";
 #define GPIO_SPI_SCK 2
 #define GPIO_SPI_CS 8
 
-// 任务相关的一些设置
-#define RPC_TASK_STACK_SIZE                          (5*1024)
-#define RPC_TASK_PRIO                                23
-#define DFLT_TASK_STACK_SIZE                         (5*1024)
-#define DFLT_TASK_PRIO                               23
-
 #define MAX_RETRY_TRANSPORT_ACTIVE                   1000
 
 static SemaphoreHandle_t spi_trans_ready_sem;
@@ -132,7 +126,7 @@ esp_err_t transport_drv_init(void(*esp_hosted_up_cb)(void))
     xSemaphoreGive(spi_trans_ready_sem);  // 初始化为可用状态
 
     // 初始化SPI总线
-    spi_init(spi0, 4000 * 1000);
+    spi_init(spi0, 1000 * 1000);
     gpio_set_function(GPIO_SPI_MOSI, GPIO_FUNC_SPI);
     gpio_set_function(GPIO_SPI_MISO, GPIO_FUNC_SPI);
     gpio_set_function(GPIO_SPI_SCK, GPIO_FUNC_SPI);
@@ -856,7 +850,7 @@ static int check_and_execute_spi_transaction(void)
 
             ESP_LOGV(TAG, "dr %u tx_valid %u\n", gpio_rx_data_ready, is_valid_tx_buf);
             /* 分配RX缓冲区 */
-            rxbuff = pvPortMalloc(MAX_SPI_BUFFER_SIZE);
+            rxbuff = pvPortMalloc(MAX_SPI_BUFFER_SIZE); // 这个在处理任务里再释放
             configASSERT(rxbuff);
 
             /* 只有在以下任一条件成立时才执行传输：
@@ -933,7 +927,9 @@ static void spi_process_rx_task(void * pvParameters)
 
 				ret = chan_arr[buf_handle->if_type]->rx(chan_arr[buf_handle->if_type]->api_chan,
 						copy_payload, copy_payload, buf_handle->payload_len);
-				if (unlikely(ret))
+
+			    // 如果上面没有及时清理
+				if (copy_payload != NULL)
 					vPortFree(copy_payload);
 			}
 		} else if (buf_handle->if_type == ESP_PRIV_IF) {
@@ -961,8 +957,9 @@ static void spi_process_rx_task(void * pvParameters)
 		 * 如果未卸载或卸载失败，应在此处释放缓冲区。
 		 */
 		if (!buf_handle->payload_zcopy) {
-			H_FREE_PTR_WITH_FUNC(buf_handle->free_buf_handle,buf_handle->priv_buffer_handle);
+		    H_FREE_PTR_WITH_FUNC(buf_handle->free_buf_handle,buf_handle->priv_buffer_handle);
 		}
+	    assert(buf_handle->priv_buffer_handle == NULL);
 	}
 }
 
@@ -977,7 +974,7 @@ static void cs_select(void) {
 static void cs_deselect(void) {
     for (uint8_t i = 0;i<5;i++)
     {
-        gpio_put(GPIO_SPI_CS, 1     );
+        gpio_put(GPIO_SPI_CS, 1);
     }
 }
 
