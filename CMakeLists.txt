@@ -7,6 +7,7 @@ set(PICO_FLASH_SIZE_BYTES "2 * 1024 * 1024")
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 include(FreeRTOS_Kernel.cmake)
+include(esp_hosted.cmake)
 
 project(project C CXX ASM)
 
@@ -18,11 +19,15 @@ pico_sdk_init()
 # 添加FreeRTOS源文件
 add_executable(project
         main.c
+        ${ESP_HOSTED_SRCS}
 )
+
+include(Middlewares/pico-extras/src/rp2_common/pico_sd_card/CMakeLists.txt)
 
 # 添加FreeRTOS头文件路径
 target_include_directories(project PRIVATE
         Core/Include
+        ${ESP_HOSTED_ADD_INCLUDEDIRS}
 )
 
 target_link_libraries(project
