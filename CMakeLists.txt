@@ -8,6 +8,7 @@ include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 include(FreeRTOS_Kernel.cmake)
 include(esp_hosted.cmake)
+include(lwip.cmake)
 
 project(project C CXX ASM)
 
@@ -20,6 +21,8 @@ pico_sdk_init()
 add_executable(project
         main.c
         ${ESP_HOSTED_SRCS}
+        ${LWIP_SRCS}
+        ${LWIP_IF_SRCS}
 )
 
 include(Middlewares/pico-extras/src/rp2_common/pico_sd_card/CMakeLists.txt)
@@ -28,6 +31,8 @@ include(Middlewares/pico-extras/src/rp2_common/pico_sd_card/CMakeLists.txt)
 target_include_directories(project PRIVATE
         Core/Include
         ${ESP_HOSTED_ADD_INCLUDEDIRS}
+        ${LWIP_INCS}
+        ${LWIP_IF_INCS}
 )
 
 target_link_libraries(project
