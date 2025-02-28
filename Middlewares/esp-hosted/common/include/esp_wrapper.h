@@ -107,8 +107,11 @@ typedef enum {
 #define ESP_LOGE(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR,   tag, format, ##__VA_ARGS__)
 #define ESP_LOGW(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN,    tag, format, ##__VA_ARGS__)
 #define ESP_LOGI(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO,    tag, format, ##__VA_ARGS__)
-#define ESP_LOGD(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG,   tag, format, ##__VA_ARGS__)
-#define ESP_LOGV(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+// #define ESP_LOGD(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG,   tag, format, ##__VA_ARGS__)
+// #define ESP_LOGV(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+
+#define ESP_LOGD(tag, format, ...)
+#define ESP_LOGV(tag, format, ...)
 
 // 日志输出开关
 #define ESP_LOG_ENABLE 1
@@ -183,8 +186,11 @@ void log_buffer_hexdump_internal(const char *tag, const void *buffer, uint16_t b
 #define ESP_HEXLOGE(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_ERROR)
 #define ESP_HEXLOGW(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_WARN)
 #define ESP_HEXLOGI(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_INFO)
-#define ESP_HEXLOGD(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_DEBUG)
-#define ESP_HEXLOGV(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_VERBOSE)
+// #define ESP_HEXLOGD(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_DEBUG)
+// #define ESP_HEXLOGV(tag2, buff, len) ESP_PRIV_HEXDUMP(TAG, tag2, buff, len, ESP_LOG_VERBOSE)
+
+#define ESP_HEXLOGD(tag2, buff, len)
+#define ESP_HEXLOGV(tag2, buff, len)
 
 // 定义传输通道的发送函数类型
 // h: 传输通道的句柄

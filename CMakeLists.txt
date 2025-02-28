@@ -47,7 +47,7 @@ target_link_libraries(project
 )
 
 pico_enable_stdio_usb(project 0)
-pico_enable_stdio_uart(project 0)
+pico_enable_stdio_uart(project 1)
 
 set_property(TARGET project APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map")
 

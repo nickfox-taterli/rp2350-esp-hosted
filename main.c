@@ -31,7 +31,8 @@ void wifi_event(void* pvParameters)
             {
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
-            vPortFree(event_msg.event_data); // 处理完后释放内存        // 从队列中接收事件消息
+            if(event_msg.event_data != NULL)
+              vPortFree(event_msg.event_data); // 处理完后释放内存        // 从队列中接收事件消息
         }
     }
 }

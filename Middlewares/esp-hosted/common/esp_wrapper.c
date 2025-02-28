@@ -57,20 +57,24 @@ int hosted_wifi_event_post(int32_t event_id,
     // 创建一个事件消息结构体
     wifi_event_msg_t event_msg;
     event_msg.event_id = event_id;
+    event_msg.event_data = NULL;
 
     // 复制事件数据到结构体中
-    event_msg.event_data = pvPortMalloc(event_data_size); // 动态分配内存
-    if (event_msg.event_data == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for event data");
-        return -1; // 返回错误
+    if(event_data_size > 0){
+        event_msg.event_data = pvPortMalloc(event_data_size); // 动态分配内存
+        if (event_msg.event_data == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for event data");
+            return -1; // 返回错误
+        }
+        memcpy(event_msg.event_data, event_data, event_data_size);
     }
-    memcpy(event_msg.event_data, event_data, event_data_size);
     event_msg.event_data_size = event_data_size;
 
     // 将事件消息发送到队列
     if (xQueueSend(wifi_event_queue, &event_msg, ticks_to_wait) != pdPASS) {
         ESP_LOGE(TAG, "Failed to send event to queue");
-        vPortFree(event_msg.event_data); // 释放内存
+        if(event_msg.event_data != NULL)
+            vPortFree(event_msg.event_data); // 释放内存
         return -1; // 返回错误
     }
 

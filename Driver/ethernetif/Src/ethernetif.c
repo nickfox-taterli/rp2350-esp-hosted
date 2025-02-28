@@ -151,7 +151,12 @@ static esp_err_t wlan_sta_rx_callback(void *buffer, uint16_t len, void *eb)
     {
         if (_netif->input(p, _netif) != ERR_OK)
         {
+            __asm__ volatile ("bkpt #0");
             pbuf_free(p);
+        }else
+        {
+            // 会在tcpip任务里释放
+            // pbuf_free(p);
         }
     }
 
