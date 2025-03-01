@@ -56,7 +56,10 @@ set(LWIP_SRCS
         ${LWIP_DIR}/src/netif/ethernet.c
         ${LWIP_DIR}/src/netif/bridgeif.c
         ${LWIP_DIR}/src/netif/bridgeif_fdb.c
+
+        ${LWIP_DIR}/src/apps/lwiperf/lwiperf.c
 )
+
 
 set(LWIP_IF_INCS "Driver/ethernetif/Inc")
 

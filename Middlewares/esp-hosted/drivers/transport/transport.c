@@ -34,7 +34,7 @@ static const char TAG[] = "transport";
 #define GPIO_SPI_MOSI 3
 #define GPIO_SPI_MISO 4
 #define GPIO_SPI_SCK 2
-#define GPIO_SPI_CS 8
+#define GPIO_SPI_CS 1
 
 #define MAX_RETRY_TRANSPORT_ACTIVE                   1000
 
@@ -125,7 +125,7 @@ esp_err_t transport_drv_init(void(*esp_hosted_up_cb)(void))
     configASSERT(spi_trans_ready_sem != NULL);
     xSemaphoreGive(spi_trans_ready_sem);  // 初始化为可用状态
 
-    // 初始化SPI总线
+    // 初始化SPI总线 (最高75MHz,最低1MHz)
     spi_init(spi0, 1000 * 1000);
     gpio_set_function(GPIO_SPI_MOSI, GPIO_FUNC_SPI);
     gpio_set_function(GPIO_SPI_MISO, GPIO_FUNC_SPI);

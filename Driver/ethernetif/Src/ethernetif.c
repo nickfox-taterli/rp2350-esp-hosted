@@ -135,28 +135,14 @@ static struct pbuf * low_level_input(struct netif *netif, uint16_t len, uint8_t 
 
 static esp_err_t wlan_sta_rx_callback(void *buffer, uint16_t len, void *eb)
 {
-    // 定义目标字节序列
-    const uint8_t target_bytes[12] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x70, 0xa8, 0xd3, 0xfc, 0x5d, 0x82};
-
-    // 检查 buffer 的前 12 个字节是否匹配目标字节序列 (验证Only)
-    if (len >= 12 && memcmp(buffer, target_bytes, 12) == 0)
-    {
-        // 触发 ARM 断点
-        // __asm__ volatile ("bkpt #0");
-    }
-
     struct pbuf* p = NULL;
     p = low_level_input(_netif, len, buffer);
     if (p != NULL)
     {
         if (_netif->input(p, _netif) != ERR_OK)
         {
-            __asm__ volatile ("bkpt #0");
+            // __asm__ volatile ("bkpt #0");
             pbuf_free(p);
-        }else
-        {
-            // 会在tcpip任务里释放
-            // pbuf_free(p);
         }
     }
 

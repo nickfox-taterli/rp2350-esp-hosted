@@ -1,9 +1,3 @@
-/**
- * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include "esp_hosted_api.h"
 #include "esp_wifi.h"
 
@@ -12,14 +6,29 @@
 #include <hardware/clocks.h>
 
 #include "pico/stdlib.h"
-#include "pico/multicore.h"
+
+#include "lwip/tcpip.h"
+#include "lwip/opt.h"
+#include "lwip/dhcp.h"
+#include "ethernetif.h"
+#include "lwip/netif.h"
+#include "lwip/ip_addr.h"
+#include "lwip/inet.h"
+#include "lwip/apps/lwiperf.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 
-extern QueueHandle_t wifi_event_queue;
+#define MAX_DHCP_TRIES  4
 
+#define DHCP_START                 (uint8_t) 1
+#define DHCP_WAIT_ADDRESS          (uint8_t) 2
+#define DHCP_ADDRESS_ASSIGNED      (uint8_t) 3
+
+struct netif gnetif;
+
+extern QueueHandle_t wifi_event_queue;
 void wifi_event(void* pvParameters)
 {
     wifi_event_msg_t event_msg;
@@ -37,85 +46,59 @@ void wifi_event(void* pvParameters)
     }
 }
 
-uint16_t number = 20;
-wifi_ap_record_t ap_info[20];
-uint16_t ap_count = 0;
-
-#include "lwip/tcpip.h"
-#include "lwip/opt.h"
-#include "lwip/dhcp.h"
-#include "ethernetif.h"
-#include "lwip/opt.h"
-#include "lwip/init.h"
-#include "lwip/netif.h"
-#include "lwip/sys.h"
-#include "lwip/timeouts.h"
-#include "lwip/ip_addr.h"
-#include "lwip/icmp.h"
-#include "lwip/raw.h"
-#include "lwip/inet.h"
-
-struct netif gnetif;
-
-#define MAX_DHCP_TRIES  4
-
-#define DHCP_OFF                   (uint8_t) 0
-#define DHCP_START                 (uint8_t) 1
-#define DHCP_WAIT_ADDRESS          (uint8_t) 2
-#define DHCP_ADDRESS_ASSIGNED      (uint8_t) 3
-#define DHCP_TIMEOUT               (uint8_t) 4
-#define DHCP_LINK_DOWN             (uint8_t) 5
-
-volatile uint8_t DHCP_state = DHCP_START;
-
-void ethernet_dhcp_thread(void * pvParameters)
+void EthBoot(void * pvParameters)
 {
-    struct netif *netif = (struct netif *) pvParameters;
     ip_addr_t ipaddr;
     ip_addr_t netmask;
     ip_addr_t gw;
     struct dhcp *dhcp;
 
+    static uint8_t state = DHCP_START;
+
+    ip_addr_set_zero_ip4(&ipaddr);
+    ip_addr_set_zero_ip4(&netmask);
+    ip_addr_set_zero_ip4(&gw);
+    
+    /* add the network interface */
+    netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
+
+    /*  Registers the default network interface. */
+    netif_set_default(&gnetif);
+    netif_set_up(&gnetif);
+    netif_set_link_up(&gnetif);
+
     for (;;)
     {
-        switch (DHCP_state)
+        switch (state)
         {
         case DHCP_START:
             {
-                // ip_addr_set_zero_ip4(&netif->ip_addr);
-                // ip_addr_set_zero_ip4(&netif->netmask);
-                // ip_addr_set_zero_ip4(&netif->gw);
-
-                IP4_ADDR(&netif->ip_addr, 192, 168, 31, 7);  // 例如：192.168.1.100
-                IP4_ADDR(&netif->netmask, 255, 255, 255, 0); // 子网掩码：255.255.255.0
-                IP4_ADDR(&netif->gw, 192, 168, 31, 1);       // 网关：192.168.1.1
-                DHCP_state = DHCP_WAIT_ADDRESS;
-                dhcp_start(netif);
+                ip_addr_set_zero_ip4(&gnetif.ip_addr);
+                ip_addr_set_zero_ip4(&gnetif.netmask);
+                ip_addr_set_zero_ip4(&gnetif.gw);
+                state = DHCP_WAIT_ADDRESS;
+                dhcp_start(&gnetif);
             }
             break;
 
         case DHCP_WAIT_ADDRESS:
             {
-                if (dhcp_supplied_address(netif))
+                if (dhcp_supplied_address(&gnetif))
                 {
-                    DHCP_state = DHCP_ADDRESS_ASSIGNED;
-                    vTaskDelete(NULL);
+                    state = DHCP_ADDRESS_ASSIGNED;
+                    // 启动内置的iperf2测速服务器
+                    lwiperf_start_tcp_server_default(NULL,NULL);
                 }
                 else
                 {
-                    dhcp = (struct dhcp *)netif_get_client_data(netif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP);
+                    dhcp = (struct dhcp *)netif_get_client_data(&gnetif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP);
 
                     /* DHCP timeout */
                     if (dhcp->tries > MAX_DHCP_TRIES)
                     {
-                        DHCP_state = DHCP_START;
+                        state = DHCP_START;
                     }
                 }
-            }
-            break;
-        case DHCP_LINK_DOWN:
-            {
-                DHCP_state = DHCP_OFF;
             }
             break;
         default: break;
@@ -123,44 +106,6 @@ void ethernet_dhcp_thread(void * pvParameters)
 
         /* wait 500 ms */
         vTaskDelay(500);
-    }
-}
-
-static void netif_config(void)
-{
-    ip_addr_t ipaddr;
-    ip_addr_t netmask;
-    ip_addr_t gw;
-
-    IP4_ADDR(&ipaddr, 192, 168, 31, 7);  // 例如：192.168.1.100
-    IP4_ADDR(&netmask, 255, 255, 255, 0); // 子网掩码：255.255.255.0
-    IP4_ADDR(&gw, 192, 168, 31, 1);       // 网关：192.168.1.1
-
-    /* add the network interface */
-    netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
-
-    /*  Registers the default network interface. */
-    netif_set_default(&gnetif);
-    vTaskDelay(3000);
-    netif_set_up(&gnetif);
-    netif_set_link_up(&gnetif);
-    xTaskCreate(ethernet_dhcp_thread, "EthDHCP", configMINIMAL_STACK_SIZE * 2, &gnetif, 1, NULL);
-}
-
-void printAllTasksStackUsage() {
-    TaskHandle_t xTask;
-    TaskStatus_t taskStatus;
-    UBaseType_t uxTaskCount = uxTaskGetNumberOfTasks();
-    TaskStatus_t *pxTaskStatusArray = pvPortMalloc(uxTaskCount * sizeof(TaskStatus_t));
-
-    if (pxTaskStatusArray != NULL) {
-        uxTaskGetSystemState(pxTaskStatusArray, uxTaskCount, NULL);
-        for (UBaseType_t i = 0; i < uxTaskCount; i++) {
-            printf("Task Name: %s, Stack High Water Mark: %u\n",
-                   pxTaskStatusArray[i].pcTaskName,
-                   pxTaskStatusArray[i].usStackHighWaterMark);
-        }
-        vPortFree(pxTaskStatusArray);
     }
 }
 
@@ -204,22 +149,10 @@ void wifi_app(void* pvParameters)
         }
     }
 
-    // esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, (wifi_rxcb_t) wlan_sta_rx_callback);
-
     tcpip_init(NULL, NULL);
-    netif_config();
-
+    xTaskCreate(EthBoot, "EthBoot", configMINIMAL_STACK_SIZE * 2, &gnetif, 1, NULL);
+    
     while (1) {
-        // 数据发送
-
-        // esp_wifi_internal_tx(WIFI_IF_STA,buf,sizeof(buf));
-        size_t freeHeapSize = xPortGetFreeHeapSize();
-        size_t minEverFreeHeapSize = xPortGetMinimumEverFreeHeapSize();
-
-        printf("Free Heap Size: %u bytes\n", freeHeapSize);
-        printf("Minimum Ever Free Heap Size: %u bytes\n", minEverFreeHeapSize);
-        //printAllTasksStackUsage();
-
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }

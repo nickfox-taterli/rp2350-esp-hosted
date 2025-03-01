@@ -51,6 +51,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* ---------- TCP options ---------- */
 #define LWIP_TCP                1
+#define LWIP_TCP_KEEPALIVE      1
 #define TCP_TTL                 255
 
 /* Controls if TCP should queue segments that arrive out of
@@ -114,7 +115,10 @@ a lot of data that needs to be copied, this should be set high. */
  */
 #define LWIP_SOCKET                     1
 
-#define LWIP_NETIF_HOSTNAME 1
+#define LWIP_NETIF_HOSTNAME         1
+
+#define LWIP_DEBUG 1
+#define HTTPD_DEBUG LWIP_DBG_ON
 
 /*
    ---------------------------------
