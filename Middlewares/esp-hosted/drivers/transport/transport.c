@@ -34,7 +34,7 @@ static const char TAG[] = "transport";
 #define GPIO_SPI_MOSI 3
 #define GPIO_SPI_MISO 4
 #define GPIO_SPI_SCK 2
-#define GPIO_SPI_CS 1
+#define GPIO_SPI_CS 8
 
 #define MAX_RETRY_TRANSPORT_ACTIVE                   1000
 
